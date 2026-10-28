@@ -1,0 +1,3 @@
+proba_black,proba_draw,proba_white,surprise_probability,flagged_as_potential_surprise,opening_eco_unknown
+0.5291202765151671,0.04621106696105963,0.42466865652377284,0.38010868,True,False
+0.6911754355880715,0.027960403788169632,0.2808641606237589,0.053633045,False,True

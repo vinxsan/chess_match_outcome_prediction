@@ -1,0 +1,12 @@
+{
+  "binary_threshold": 0.35,
+  "three_class_names": [
+    "black",
+    "draw",
+    "white"
+  ],
+  "binary_class_names": [
+    "Favorite won",
+    "Favorite did not win"
+  ]
+}
