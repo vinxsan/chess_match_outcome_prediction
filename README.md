@@ -77,7 +77,7 @@ The work has two main goals, corresponding to two distinct product use cases:
 
 The columns `created_at` and `last_move_at` (renamed `start_time` and `end_time` for clarity) are timestamps in milliseconds. The game duration was computed as:
 
-$$play\_time = \frac{end\_time - start\_time}{1000 \times 60} \quad \text{(minutes)}$$
+$$play\\_time = \frac{end\\_time - start\\_time}{1000 \times 60} \quad \text{(minutes)}$$
 
 Two distinct anomalies emerged, handled in two successive phases:
 
@@ -85,7 +85,7 @@ Two distinct anomalies emerged, handled in two successive phases:
 
 **Phase 2 — durations that are implausible relative to the theoretical maximum.** Even after the first cleaning step, some games showed physically implausible durations (e.g. more than 1,000 or even 10,000 minutes), traceable to time controls with a large increment (e.g. `180+180`) that are incompatible with the recorded number of moves. To quantify the problem I derived two new features from `increment_code`, `base_time` and `increment_time_seconds` (base time in minutes and per-move increment in seconds), and estimated a **theoretical upper bound** on the game duration:
 
-$$estimated\_play\_time = 2 \times base\_time + turns \times \frac{increment\_time\_seconds}{60}$$
+$$estimated\\_play\\_time = 2 \times base\\_time + turns \times \frac{increment\\_time\\_seconds}{60}$$
 
 Comparing `play_time` with this estimate, **965 games (8.38%)** were already implausible with no tolerance at all. I therefore tested several tolerance thresholds (1.2x–5.0x) to balance two competing needs: not discarding legitimate games that were simply slower than expected (e.g. because of network lag), and avoiding the inclusion of dubious data. I chose a **tolerance of 2.0x** as a compromise: it removes the most extreme tails without being overly aggressive.
 
@@ -251,7 +251,7 @@ Given this asymmetry, I chose to **favor recall by lowering the threshold** belo
 | 0.40 | 0.47 | 0.54 | 0.50 |
 | **0.35 (chosen)** | 0.45 | **0.65** | **0.53** |
 | 0.30 | 0.44 | 0.72 | 0.55 |
-| 0.25 | — | — | — |
+| 0.25 | - | - | - |
 
 **Chosen threshold: 0.35.** Compared to the default, it almost doubles the recall (from 37% to 65%) at the cost of a limited loss of precision (from 49% to 45%). I discarded even lower thresholds (0.30, 0.25) because, although recall keeps rising, the marginal gain is paid for with a growing loss of precisio. The chosen threshold represents a reasonable compromise.
 
@@ -296,18 +296,18 @@ Here too `rating_diff` remains the leading feature, but a flattening of the impo
 ### 6.1 Saved Artifacts
 
 * **Saved models** (`models/` folder, via `joblib`):
-  * `three_classification_model.pkl` — Random Forest Tuned pipeline (preprocessing + model) for the 3-class problem.
-  * `binary_model.pkl` — XGBoost baseline pipeline (preprocessing + model) for the binary problem.
-  * `config_params.json` — parameters that cannot be derived from the model alone: the binary decision threshold (`binary_threshold: 0.35`) and the class names for both problems. The names of the three classes (`black`, `draw`, `white`) are stored in the same order as the columns of `predict_proba`, so no separate `LabelEncoder` is needed at inference time: the models and the configuration file are enough to reproduce the predictions.
+  * `three_classification_model.pkl` - Random Forest Tuned pipeline (preprocessing + model) for the 3-class problem.
+  * `binary_model.pkl` - XGBoost baseline pipeline (preprocessing + model) for the binary problem.
+  * `config_params.json` - parameters that cannot be derived from the model alone: the binary decision threshold (`binary_threshold: 0.35`) and the class names for both problems. The names of the three classes (`black`, `draw`, `white`) are stored in the same order as the columns of `predict_proba`, so no separate `LabelEncoder` is needed at inference time: the models and the configuration file are enough to reproduce the predictions.
 * **Integrity check**: after saving, the model was reloaded from disk and compared (`np.allclose`) with the probabilities produced by the original in-memory object, confirming that serialization introduces no discrepancy. Loading was also verified in a Python process separate from the notebook, to rule out hidden dependencies on code defined in the notebook.
 
 ### 6.2 Inference Module (`inference.py`)
 
 The inference logic lives in a standalone module that can be imported and tested independently of the notebook, which remains the place for prototyping and analysis:
 
-* `build_features(data)` — builds the features from the pre-match columns only (`white_rating`, `black_rating`, `increment_code`, `opening_eco`, `rated`, and `opening_ply` or `opening_moves`): `rating_diff`, parsing of `increment_code` into `base_time` (minutes) and `increment_time_seconds`, the estimated duration and the time-control category. It validates the input with explicit errors (missing columns, invalid `increment_code` format) and **never drops rows**: the output has the same rows and the same index as the input. The training-data cleaning (zero-duration games, 2x tolerance) stays in the notebook, because it requires information that is not available before the game.
-* `load_artifacts(models_dir=None)` — loads the models and the configuration once, and derives from the fitted `OneHotEncoder` the set of openings seen during training. It checks that the files exist and that the class names in the config are consistent with the model.
-* `predict_match_outcome(match_data, artifacts=None)` — accepts a single match (dictionary) or a batch (list of dictionaries) and returns, for each match and in input order, the probabilities for the three classes, the "upset" probability (binary model), the flag based on the 0.35 threshold, and a data-quality flag (`opening_eco_unknown`). If no artifacts are passed, they are loaded once and reused in later calls.
+* `build_features(data)` - builds the features from the pre-match columns only (`white_rating`, `black_rating`, `increment_code`, `opening_eco`, `rated`, and `opening_ply` or `opening_moves`): `rating_diff`, parsing of `increment_code` into `base_time` (minutes) and `increment_time_seconds`, the estimated duration and the time-control category. It validates the input with explicit errors (missing columns, invalid `increment_code` format) and **never drops rows**: the output has the same rows and the same index as the input. The training-data cleaning (zero-duration games, 2x tolerance) stays in the notebook, because it requires information that is not available before the game.
+* `load_artifacts(models_dir=None)` - loads the models and the configuration once, and derives from the fitted `OneHotEncoder` the set of openings seen during training. It checks that the files exist and that the class names in the config are consistent with the model.
+* `predict_match_outcome(match_data, artifacts=None)` - accepts a single match (dictionary) or a batch (list of dictionaries) and returns, for each match and in input order, the probabilities for the three classes, the "upset" probability (binary model), the flag based on the 0.35 threshold, and a data-quality flag (`opening_eco_unknown`). If no artifacts are passed, they are loaded once and reused in later calls.
 
 The check on unknown openings came from a concrete test case: when passing a value with a typo (`'AOO'` with the letter O instead of `'A00'` with a zero), the function correctly emitted a `UserWarning` instead of failing silently or treating it as any other valid category.
 
@@ -383,9 +383,9 @@ The data used in this project should be regarded as a static snapshot of Lichess
 | Classification quality (3-class model) | F1 Macro, recall per class | Weekly | Confirms that the model keeps separating the outcomes correctly |
 | Matchmaking model quality (binary) | F1 Macro, recall on "favorite does not win" | Weekly | It is the metric on which the model was selected; a drop means fewer real upsets flagged |
 | Calibration | Reliability diagram / Brier Score, recomputed periodically | Monthly | Calibration can degrade even when the discriminative metrics look stable |
-| Input drift — rating | Distribution of `white_rating`, `black_rating`, `rating_diff` compared with training | Weekly | Sudden changes in rating indicate a changing player population |
-| Input drift — openings | % of games with `opening_eco` in the "infrequent" category (the `opening_eco_unknown` flag already built into the inference function) | Weekly | A growing share of "unknown" openings is a direct drift signal, already built into the serialized pipeline |
-| Input drift — game format | Distribution of `match_category`, `rated` | Monthly | Changes in the popularity of time controls alter the behavior of the players on whom the model was trained |
+| Input drift - rating | Distribution of `white_rating`, `black_rating`, `rating_diff` compared with training | Weekly | Sudden changes in rating indicate a changing player population |
+| Input drift - openings | % of games with `opening_eco` in the "infrequent" category (the `opening_eco_unknown` flag already built into the inference function) | Weekly | A growing share of "unknown" openings is a direct drift signal, already built into the serialized pipeline |
+| Input drift - game format | Distribution of `match_category`, `rated` | Monthly | Changes in the popularity of time controls alter the behavior of the players on whom the model was trained |
 
 ### 9.3 Retraining Policy
 
@@ -408,7 +408,7 @@ models/
 │   ├── three_classification_model.pkl
 │   ├── binary_model.pkl
 │   └── config_params.json   # includes binary_threshold, class names
-│                             # AND the metrics on which this version was validated
+│                            # and the metrics on which this version was validated
 ├── 2027-01-05/
 │   └── ...
 ```
